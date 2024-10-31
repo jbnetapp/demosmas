@@ -1,4 +1,4 @@
-Build NetApp SnapMirror Business Continuity (SM-BC) also known as SnapMirror active sync with Linux using NetApp Lab On Demand :
+Build NetApp SnapMirror active sync configuration (SM-AS) with Linux using NetApp Lab On Demand :
 --------------------------------------------------
 - You can use Lab on Demand ONTAP 9.14.1 : https://labondemand.netapp.com/node/724
 - NetApp SnapMirror Business Continutiy (SM-BC): https://docs.netapp.com/us-en/ontap/smbc/index.html
