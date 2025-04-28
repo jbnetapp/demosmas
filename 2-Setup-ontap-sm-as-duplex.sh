@@ -112,12 +112,12 @@ echo Create svm relation
 sps=`sshpass -p $PASSWD ssh -l admin cluster2 vserver peer show |grep $SVM_NAME_S |awk '{ print $3}'|tr -d '\r'`
 if [ "$sps" != "peered" ]; then
 	sshpass -p $PASSWD ssh -l admin cluster1 vserver peer create -vserver $SVM_NAME_P -peer-vserver $SVM_NAME_S -applications snapmirror -peer-cluster cluster2
-	time=0 ; while [ "$sps" != "pending" ] && [ $time -lt $TIMEOUT ]; do
+	time=0 ; while [ "$sps" != "peered" ] && [ "$sps" != "pending" ] && [ $time -lt $TIMEOUT ]; do
 		sleep 1; time=$(($time + 1))
 		sps=`sshpass -p $PASSWD ssh -l admin cluster2 vserver peer show |grep $SVM_NAME_S |awk '{ print $3}'|tr -d '\r'`
 		echo "vserver peer status [$sps] [$time]"
 	done
-	[ "$sps" != "pending" ] && clean_and_exit "Error Unable to create vserver peer from cluster1 $SVM_NAME_P" 255
+	[ "$sps" != "peered" ] && [ "$sps" != "pending" ] && clean_and_exit "Error Unable to create vserver peer from cluster1 $SVM_NAME_P" 255
 	sshpass -p $PASSWD ssh -l admin cluster2 vserver peer accept -vserver $SVM_NAME_S -peer-vserver $SVM_NAME_P
 	time=0 ; while [ "$sps" != "peered" ] && [ $time -lt $TIMEOUT ]; do
 		sleep 1; time=$(($time + 1))
