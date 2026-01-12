@@ -29,7 +29,7 @@ check_netapp_linux_bin(){
 }
 
 check_mediator() {
- 	mediator_port=`lsof -n |grep uwsgi |grep TCP |grep "*:$MEDIATOR_PORT" | awk '{ print $9}' | uniq`
+ 	mediator_port=`lsof -n |grep TCP |grep "*:$MEDIATOR_PORT" | awk '{ print $9}' | uniq`
 	[ "$mediator_port" != "*:${MEDIATOR_PORT}" ] && clean_and_exit "Error Mediator not running or used a bad port number" 255
 }
 
