@@ -1,6 +1,6 @@
 Build NetApp SnapMirror active sync configuration (SM-AS) with Linux using NetApp Lab On Demand :
 --------------------------------------------------
-- You can use Lab on Demand ONTAP 9.15.1 : https://labondemand.netapp.com/node/882
+- You can use Lab on Demand ONTAP 9.18.1 : https://labondemand.netapp.com
 - NetApp SnapMirror Active Sync (SM-AS): https://docs.netapp.com/us-en/ontap/snapmirror-active-sync/index.html
 
 Introduction
@@ -9,10 +9,12 @@ Before initiating this lab, it's **imperative to verify** that data aggregates e
 - Use the Menu **STORAGE -> Tiers -> Add Local Tier** from ONTAP System Manager:
 <img src="Pictures/SystemManagerTiers.png" alt="NetApp System Manager" width="1100" height="350">
 
-The following scripts are avaialbe from [demosmas](https://github.com/jbnetapp/demosmas). The scipts automatically build an SM-BC configuration between cluster1 and cluster2 using NetApp Lab on Demande [Early Adopter Lab for ONTAP 9.14.1 v1.1](https://labondemand.netapp.com/node/724). The scripts can work with ONTAP 9.9.1 or later. This section provides a brief overview of all the scripts that are available for use: 
-- The  script **0-Setup-Linux-iscsi.sh** is responsible for installing all necessary Linux packages, configuring the kernel variable, and subsequently rebooting the system.
-- The script **1-Install-Linux-NetAppTools.sh** is designed to automate the installation of the **NetApp host utilities kit** and the **the NetApp Mediator 1.7** which are available in the [pkg directory](https://github.com/jbnetapp/demosmas/tree/main/pkg)
-- The script **2-Setup-ontap-sm-as.sh** is designed to build the full SM-BC configuration with all following steps:
+Before initiating this lab, you have to manually install the mediator package on the Linux Host.
+
+The following scripts are avaialbe from [demosmas](https://github.com/jbnetapp/demosmas). The scipts automatically build an SM-BC configuration between cluster1 and cluster2 using NetApp Lab on Demande [Early Adopter Lab for ONTAP 9.18.1](https://labondemand.netapp.com). The scripts can work with ONTAP 9.15.1 or older. This section provides a brief overview of all the scripts that are available for use: 
+- The **0-Setup-Linux-iscsi.sh** script is responsible for installing all necessary Linux packages, configuring the kernel variable, and subsequently rebooting the system.
+- The **1-Install-Linux-NetAppTools.sh** script automates the deployment of the **NetApp Host Utilities Kit** and performs a validation check to confirm that the **NetApp Mediator** is properly installed. If the Mediator is not present, it must be installed manually. An installation example is provided below.
+- The  **2-Setup-ontap-sm-as-duplex.sh** script is designed to build the full SM-BC configuration with all following steps:
 	- Create dedicated Intercluster LIFS on cluster1 and cluster2 
 	- Create Cluster peer between cluster1 and cluster2
 	- Create vserver SAN with 4 iscsi DATA LIF on cluster1 and cluster2
@@ -23,13 +25,13 @@ The following scripts are avaialbe from [demosmas](https://github.com/jbnetapp/d
 	- Create SnapMirror synchronous *consistency group* replication from this volume to the cluster2 with *AutomatedFailOver* policy
 	- Map the LUN to the iqn/igroup from cluster1 and cluster2
 	
-- The script **3-Linux-LunDiscover.sh** will discover all LUN path.
+- The **3-Linux-LunDiscover.sh** script will discover all LUN path.
   
-- The script **4-Linux-LVM-create.sh** is designed to establish a Logical Volume Manager (LVM) configuration and mount a Logical Volume file system on the /data directory..
+- The **4-Linux-LVM-create.sh** script  is designed to establish a Logical Volume Manager (LVM) configuration and mount a Logical Volume file system on the /data directory..
 
-- The script **5-Linux-LVM-create.sh <lun_index_nb>** is designed to append a new Logical Unit Number (LUN) to the existing primary consistency group.
+- The **5-Linux-LVM-create.sh <lun_index_nb>** script is designed to append a new Logical Unit Number (LUN) to the existing primary consistency group.
  
-- The script **simpleio.sh** can be used to run IOPs on the LUN (using dd).
+- The  **simpleio.sh** script can be used to run IOPs on the LUN (using dd).
 	
 You can reverse all the configuration bye running the following scripts:
 - The first script **Reverse-4-Linux-VM-create.sh**  will delete the LVM configuration create by the script  *3-linux-LVM-create.sh*
@@ -39,19 +41,52 @@ You can reverse all the configuration bye running the following scripts:
 - All scripts used the same configuration File **Setup.conf**
 
 # Example
-Use putty to logon with ssh on the linux centos01
+Download the NetApp mediator from Windows and copy to /var/tmp using scp from Windows cmd terminal:
+````
+C:\Users\Administrator.DEMO>cd Downloads
+C:\Users\Administrator.DEMO\Downloads>scp ./ontap-mediator-1.11.0.tgz root@192.168.0.61:/var/tmp
+root@192.168.0.61's password:
+````
+
+Use putty to logon with ssh on the linux rhel1
 ````
 IP: 192.168.0.61 Login root Password: Netapp1! 
 ````
+Install the mediator and enter the Mediator login and Password enter Y to all question
+````
+[root@rhel1 ~]# cd /var/tmp
+[root@rhel1 tmp]# tar xvf ontap-mediator-1.11.0.tgz
+[root@rhel1 tmp]# cd ontap-mediator-1.11.0
+[root@rhel1 ontap-mediator-1.11.0]# ./ontap-mediator-1.11.0
+ONTAP Mediator: Self Extracting Installer
++ Extracting the ONTAP Mediator installation/upgrade archive
++ Performing the ONTAP Mediator run-time code signature check
+
+ONTAP Mediator requires two user accounts. One for the service (netapp), and one for use by ONTAP to the mediator API (mediatoradmin).
+Would you like to use the default account names: netapp + mediatoradmin? (Y(es)/n(o)): Y
+Enter ONTAP Mediator user account (mediatoradmin) password:  NetApp1!
+Re-Enter ONTAP Mediator user account (mediatoradmin) password: NetApp1!
+...
+...
+Allow SELinux context change?  Y(es)/n(o): Y
+...
+...
+Do you wish to continue? Y(es)/n(o): Y
+...
+...
+Installing ONTAP Mediator. (Log: /var/tmp/ontap-mediator-1.11.0/ontap_mediator.vCkGN7/ontap-mediator-1.11.0/ontap-mediator-1.11.0/install_20260112132318.log)
+This step will take several minutes. Use the log file to view progress.
+````
+
 Use git clone to get all scripts and all required packages
 ````
-[root@centos1 ~]# git clone https://github.com/jbnetapp/demosmas
-[root@centos1 ~]# cd demosmas/
+[root@rhel1 ~]# git clone https://github.com/jbnetapp/demosmas
+[root@rhel1 ~]# cd demosmas/
 ````
 
 Run the next script to install all required yum package and confirm the grub kernel update for iscsi before to reboot  linux :
 ````
-[root@centos1 demosmas]# ./0-Setup-Linux-iscsi.sh
+[root@rhel1 demosmas]# ./0-Setup-Linux-iscsi.sh
 ...
 ...
 Run: [grubby --args rdloaddriver=scsi_dh_alua --update-kernel /boot/vmlinuz-3.10.0-1160.6.1.el7.x86_64] [y/n]? : y
@@ -65,36 +100,36 @@ IP: 192.168.0.61 Login root Password: Netapp1!
 
 Check if that the varaible *rdloaddriver=scsi_dh_alua* has been add into the kernel image file
 ````
-[root@centos1 demosmas]# cat /proc/cmdline
+[root@rhel1 demosmas]# cat /proc/cmdline
 BOOT_IMAGE=/vmlinuz-3.10.0-1160.6.1.el7.x86_64 root=/dev/mapper/centos-root ro crashkernel=auto spectre_v2=retpoline rd.lvm.lv=centos/root rd.lvm.lv=centos/swap rhgb quiet LANG=en_US.UTF-8 rdloaddriver=scsi_dh_alua
 ````
 
 Run the next script that will install NetApp Linux Package *Host utilities kit* and *NetApp Mediator 1.2*. Check that the script return the string **Terminate** with exit code **0** :
 ````
-[root@centos1 demosmas]# ./1-Install-Linux-NetAppTools.sh
+[root@rhel1 demosmas]# ./1-Install-Linux-NetAppTools.sh
 ...
 ...
 ...
 Terminate
-[root@centos1 demosmas]# echo $?
+[root@rhel1 demosmas]# echo $?
 0
 ````
 
 
 Run the third script that will create SVM, Mediator, LUN, and SnapMirror Active Sync relation between cluster1 and cluster2. Check that the script return the string **Terminate** with exit code **0** :
 ````
-[root@centos1 demosmas]# ./2-Setup-ontap-sm-as.sh*
+[root@rhel1 demosmas]# ./2-Setup-ontap-sm-as-duplex.sh.sh*
 ...
 ...
 ...
 Terminate
-[root@centos1 demosmas]# echo $?
+[root@rhel1 demosmas]# echo $?
 0
 ````
 
 Check the Mediator status is **connected** on both clusters
 ````
-[root@centos1 demosmas]# ./runallcluster snapmirror mediator show
+[root@rhel1 demosmas]# ./runallcluster snapmirror mediator show
 /usr/bin/sshpass
 /usr/sbin/multipath
 /usr/bin/rescan-scsi-bus.sh
@@ -120,7 +155,7 @@ Mediator Address Peer Cluster     Connection Status Quorum Status
 
 Check SnapMirror status and chech that the same Lun with same serial number is available on both clusters *Example Serial is *wOj7N$QPt5OO* :
 ````
-[root@centos1 demosmas]# ssh -l admin cluster2 snapmirror show
+[root@rhel1 demosmas]# ssh -l admin cluster2 snapmirror show
 Access restricted to authorized users
 Password:
 Last login time: 12/21/2020 20:44:24
@@ -130,7 +165,7 @@ Path        Type  Path        State   Status         Progress  Healthy Updated
 ----------- ---- ------------ ------- -------------- --------- ------- --------
 SVM_SAN_P:/cg/cg_p XDP SVM_SAN_S:/cg/cg_s Snapmirrored InSync - true   -
 
-[root@centos1 demosmas]# ./runallcluster lun show -fields serial
+[root@rhel1 demosmas]# ./runallcluster lun show -fields serial
 /usr/bin/sshpass
 /usr/sbin/multipath
 /usr/bin/rescan-scsi-bus.sh
@@ -156,10 +191,10 @@ SVM_SAN_S /vol/LUN01_S/LUN01 wOj7N$QPt5OO
 
 Run the script to discover the LUN on Linux with all path and LVM (Logical Volume Manager) with a file system ,using this LUN. Check that the script return the string **Terminate** with exit code **0**  :
 ````
-[root@centos1 demosmas]# ./3-Linux-LunDiscover.sh
+[root@rhel1 demosmas]# ./3-Linux-LunDiscover.sh
 ....
 Terminate
-[root@centos1 demosmas]# echo $?
+[root@rhel1 demosmas]# echo $?
 0
 
 ````
@@ -195,26 +230,26 @@ SVM_SAN_P                     /vol/LUN01/LUN01               /dev/sdb        hos
 
 Run the script to create LVM (Logical Volume Manager) configuration with a file system ,using this LUN. Check that the script return the string **Terminate** with exit code **0**  :
 ````
-[root@centos1 demosmas]# ./4-Linux-LVM-create.sh
+[root@rhel1 demosmas]# ./4-Linux-LVM-create.sh
 ....
 Terminate
-[root@centos1 demosmas]# echo $?
+[root@rhel1 demosmas]# echo $?
 0
 
 ````
 Verfiy file system on LVM device
 ````
-[root@centos1 demosmas]# df -h /data
+[root@rhel1 demosmas]# df -h /data
 Filesystem               Size  Used Avail Use% Mounted on
 /dev/mapper/vgdata-lv01  8.8G   37M  8.3G   1% /data
 
-[root@centos1 demosmas]# vgdisplay vgdata -v |grep "PV Name"
+[root@rhel1 demosmas]# vgdisplay vgdata -v |grep "PV Name"
   PV Name               /dev/mapper/3600a0980774f6a374e24515074354f4f
 ````
 
 Create Simple IO activity for your test and crash on cluster to check SM-BC behavior 
 ````
-[root@centos1 demosmas]# ./simpleio.sh
+[root@rhel1 demosmas]# ./simpleio.sh
 Single Write
 2000+0 records in
 2000+0 records out
