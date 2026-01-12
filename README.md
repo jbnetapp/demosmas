@@ -84,6 +84,18 @@ Use git clone to get all scripts and all required packages
 [root@rhel1 ~]# cd demosmas/
 ````
 
+Check script Configuration File and verifiy if the Mediator Password you enter is correct
+````
+[root@rhel1 demosmas]# more ./Setup
+...
+...
+MEDIATOR_PORT=31784
+MEDIATOR_IP=192.168.0.61
+MEDIATOR_PASSWD=$PASSWD
+...
+...
+````
+
 Run the next script to install all required yum package and confirm the grub kernel update for iscsi before to reboot  linux :
 ````
 [root@rhel1 demosmas]# ./0-Setup-Linux-iscsi.sh
