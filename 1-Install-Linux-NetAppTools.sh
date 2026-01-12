@@ -25,15 +25,15 @@ NETAPP_MEDIATOR_PKG=${DIRNAME}/pkg/ontap-mediator-1.9.0
 [ ! -f $NETAPP_LINUX_HUK_71_PKG ] && clean_and_exit "Error $NETAPP_LINUX_HUK_71_PKG no such file" 255
 rpm -i $NETAPP_LINUX_HUK_71_PKG
 
-mediator_port=`lsof -n |grep TCP |grep "*:$MEDIATOR_PORT" | awk '{ print $9}' | uniq`
-if [ -z "$mediator_port" ] ; then
-	echo Error: Mediator not installed please download and reinstall the Mediator
-	exit 0
-	[ ! -f $NETAPP_MEDIATOR_PKG ] && clean_and_exit "Error $NETAPP_MEDIATOR_PKG no such file" 255
-	chmod +x $NETAPP_MEDIATOR_PKG
-	[ ! -x $NETAPP_MEDIATOR_PKG ] && clean_and_exit "Error $NETAPP_MEDIATOR_PKG no such file" 255
-	( echo $MEDIATOR_PASSWD ; sleep 5 ; echo $MEDIATOR_PASSWD ; sleep 5 ; echo y ) | $NETAPP_MEDIATOR_PKG -y
-fi
+#mediator_port=`lsof -n |grep TCP |grep "*:$MEDIATOR_PORT" | awk '{ print $9}' | uniq`
+#if [ -z "$mediator_port" ] ; then
+#	echo Error: Mediator not installed please download and reinstall the Mediator
+#	exit 0
+#	[ ! -f $NETAPP_MEDIATOR_PKG ] && clean_and_exit "Error $NETAPP_MEDIATOR_PKG no such file" 255
+#	chmod +x $NETAPP_MEDIATOR_PKG
+#	[ ! -x $NETAPP_MEDIATOR_PKG ] && clean_and_exit "Error $NETAPP_MEDIATOR_PKG no such file" 255
+#	( echo $MEDIATOR_PASSWD ; sleep 5 ; echo $MEDIATOR_PASSWD ; sleep 5 ; echo y ) | $NETAPP_MEDIATOR_PKG -y
+#fi
 
 check_netapp_linux_bin
 check_mediator
