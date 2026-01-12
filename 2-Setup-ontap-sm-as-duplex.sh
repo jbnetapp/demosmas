@@ -28,6 +28,7 @@ echo Init SSH session host
 check_ssh_keyhost cluster1
 check_ssh_keyhost cluster2
 
+[ ! -f $CRT_FILE ] && clean_and_exit "ERROR: Mediator Certificate $CRT_FILE Not found: Check Setup.conf"
 
 sshpass -p $PASSWD ssh -l admin cluster1 version 
 sshpass -p $PASSWD ssh -l admin cluster2 version 
@@ -41,14 +42,13 @@ AGGR_DATA_CL1=`sshpass -p $PASSWD ssh -l admin cluster1 aggr show -root false |g
 AGGR_DATA_CL2=`sshpass -p $PASSWD ssh -l admin cluster2 aggr show -root false |grep online |sort -k2 -u | tail -1 |awk '{print $1}'|tr -d '\r'`
 [ -z "$AGGR_DATA_CL2" ] && clean_and_exit "ERROR: No Data Aggregate found in cluster2"
 
+#echo Enable AutomatedFailoverDuplex on cluster1 
+#sshpass -p $PASSWD ssh -l admin cluster1 node run -node cluster1-01 "\"priv set diag; bootargs set bootarg.enable_AutomatedFailoverDuplex true\""
+#sshpass -p $PASSWD ssh -l admin cluster1 node run -node cluster1-02 "\"priv set diag; bootargs set bootarg.enable_AutomatedFailoverDuplex true\""
 
-echo Enable AutomatedFailoverDuplex on cluster1
-sshpass -p $PASSWD ssh -l admin cluster1 node run -node cluster1-01 "\"priv set diag; bootargs set bootarg.enable_AutomatedFailoverDuplex true\""
-sshpass -p $PASSWD ssh -l admin cluster1 node run -node cluster1-02 "\"priv set diag; bootargs set bootarg.enable_AutomatedFailoverDuplex true\""
-
-echo Enable AutomatedFailoverDuplex on cluster2
-sshpass -p $PASSWD ssh -l admin cluster2 node run -node cluster2-01 "\"priv set diag; bootargs set bootarg.enable_AutomatedFailoverDuplex true\""
-sshpass -p $PASSWD ssh -l admin cluster2 node run -node cluster2-02 "\"priv set diag; bootargs set bootarg.enable_AutomatedFailoverDuplex true\""
+#echo Enable AutomatedFailoverDuplex on cluster2
+#sshpass -p $PASSWD ssh -l admin cluster2 node run -node cluster2-01 "\"priv set diag; bootargs set bootarg.enable_AutomatedFailoverDuplex true\""
+#sshpass -p $PASSWD ssh -l admin cluster2 node run -node cluster2-02 "\"priv set diag; bootargs set bootarg.enable_AutomatedFailoverDuplex true\""
 
 echo Create InteCluser LIF cluster1
 sshpass -p $PASSWD ssh -l admin cluster1 network interface create -vserver cluster1 -lif intercluster1 -address $IP_I1 -netmask-length $LMASK -home-node cluster1-01 -service-policy default-intercluster -home-port e0g -status-admin up
@@ -71,14 +71,14 @@ if [ "$cps" == "ok" ] ; then
 	[ "$cps" != "ok" ] && clean_and_exit "Error Cluster Peer is in bad status please correct it and try again" 255
 else
 	time=0 ; while [ "$cps" != "pending" ] && [ $time -lt $TIMEOUT ]; do
-		[ "$cps" != "pending" ] && (sleep 1; echo $PASSWD ; sleep 2; echo $PASSWD )| sshpass -p $PASSWD ssh -l admin cluster1 cluster peer create -address-family ipv4 -peer-addrs $IP_I2
+		[ "$cps" != "pending" ] && (sleep 1; echo $PASSWD ; sleep 2; echo $PASSWD )| sshpass -p $PASSWD ssh -tt -l admin cluster1 cluster peer create -address-family ipv4 -peer-addrs $IP_I2
 		sleep 5; time=$(($time + 5))
 		cps=`sshpass -p $PASSWD ssh -l admin cluster1 cluster peer show |grep cluster2 | awk '{print $4}'|tr -d '\r'`
 		echo "Cluster peer status is [$cps] [$time]"
 	done
 	[ "$cps" != "pending" ] && clean_and_exit "Error Unable to create cluster peer from cluster1" 255
 	time=0 ; while [ "$cps" != "ok" ] && [ $time -lt $TIMEOUT ]; do
-		[ "$cps" != "ok" ] && (sleep 1; echo $PASSWD ; sleep 2; echo $PASSWD )| sshpass -p $PASSWD ssh -l admin cluster2 cluster peer create -address-family ipv4 -peer-addrs $IP_I1 
+		[ "$cps" != "ok" ] && (sleep 1; echo $PASSWD ; sleep 2; echo $PASSWD )| sshpass -p $PASSWD ssh -tt -l admin cluster2 cluster peer create -address-family ipv4 -peer-addrs $IP_I1 
 		sleep 5; time=$(($time + 5))
 		cps=`sshpass -p $PASSWD ssh -l admin cluster2 cluster peer show |grep cluster1 | awk '{print $4}'|tr -d '\r'`
 		echo "Cluster peer status is [$cps] [$time]"
@@ -141,7 +141,7 @@ echo Add certificate on cluster1
 crt=`sshpass -p $PASSWD ssh -l admin cluster1 security certificate show -cert-name ONTAPMediatorCA -fields serial |grep ONTAPMediatorCA |tr -d '\r'`
 time=0 ; while [ -z "$crt" ] && [ $time -lt $TIMEOUT ]; do
 	sleep 5; time=$(($time + 5))
-	[ -z "$crt" ] && (sleep 1; cat $CRT_FILE; sleep 2; echo "" ) | sshpass -p $PASSWD ssh -l admin cluster1 security certificate install -type server-ca -vserver cluster1 -cert-name ONTAPMediatorCA
+	[ -z "$crt" ] && (sleep 1; cat $CRT_FILE; sleep 2; echo "" ) | sshpass -p $PASSWD ssh -tt -l admin cluster1 security certificate install -type server-ca -vserver cluster1 -cert-name ONTAPMediatorCA
 	crt=`sshpass -p $PASSWD ssh -l admin cluster1 security certificate show -cert-name ONTAPMediatorCA -fields serial |grep ONTAPMediatorCA |tr -d '\r'`
 done
 crt=`sshpass -p $PASSWD ssh -l admin cluster1 security certificate show -cert-name ONTAPMediatorCA -fields serial |grep ONTAPMediatorCA |tr -d '\r'`
@@ -151,7 +151,7 @@ echo Add certificate on cluster2
 crt=`sshpass -p $PASSWD ssh -l admin cluster2 security certificate show -cert-name ONTAPMediatorCA -fields serial |grep ONTAPMediatorCA |tr -d '\r'`
 time=0 ; while [ -z "$crt" ] && [ $time -lt $TIMEOUT ]; do
 	sleep 5; time=$(($time + 5))
-	[ -z "$crt" ] && (sleep 1; cat $CRT_FILE; sleep 2; echo "" ) | sshpass -p $PASSWD ssh -l admin cluster2 security certificate install -type server-ca -vserver cluster2 -cert-name ONTAPMediatorCA
+	[ -z "$crt" ] && (sleep 1; cat $CRT_FILE; sleep 2; echo "" ) | sshpass -p $PASSWD ssh -tt -l admin cluster2 security certificate install -type server-ca -vserver cluster2 -cert-name ONTAPMediatorCA
 	crt=`sshpass -p $PASSWD ssh -l admin cluster2 security certificate show -cert-name ONTAPMediatorCA -fields serial |grep ONTAPMediatorCA |tr -d '\r'`
 done
 crt=`sshpass -p $PASSWD ssh -l admin cluster2 security certificate show -cert-name ONTAPMediatorCA -fields serial |grep ONTAPMediatorCA |tr -d '\r'`
@@ -161,7 +161,7 @@ echo Add the Mediator on cluster1
 ms=`sshpass -p $PASSWD ssh -l admin cluster1 snapmirror mediator show -mediator-address $MEDIATOR_IP -peer-cluster cluster2 |grep $MEDIATOR_IP |awk '{print $3}' | tr -d '\r'`
 if [ "$ms" != "connected" ] ; then
 	time=0 ; while [ "$ms" != "connected" ] && [ $time -lt $TIMEOUT ]; do
-		[ "$ms" != "connected" ] && (sleep 1; echo $MEDIATOR_PASSWD; sleep 2; echo $MEDIATOR_PASSWD)| sshpass -p $PASSWD ssh -l admin cluster1 snapmirror mediator add -mediator-address $MEDIATOR_IP -peer-cluster cluster2 -username mediatoradmin -port-number $MEDIATOR_PORT
+		[ "$ms" != "connected" ] && (sleep 1; echo $MEDIATOR_PASSWD; sleep 2; echo $MEDIATOR_PASSWD)| sshpass -p $PASSWD ssh -tt -l admin cluster1 snapmirror mediator add -mediator-address $MEDIATOR_IP -peer-cluster cluster2 -username mediatoradmin -port-number $MEDIATOR_PORT
 		sleep 1; time=$(($time + 1))
 		ms=`sshpass -p $PASSWD ssh -l admin cluster1 snapmirror mediator show -mediator-address $MEDIATOR_IP -peer-cluster cluster2 |grep $MEDIATOR_IP |awk '{print $3}' | tr -d '\r'`
 		echo "Mediator status [$ms] [$time]"
@@ -173,7 +173,7 @@ echo Add the Mediator on cluster2
 ms=`sshpass -p $PASSWD ssh -l admin cluster2 snapmirror mediator show -mediator-address $MEDIATOR_IP -peer-cluster cluster1 |grep $MEDIATOR_IP |awk '{print $3}' | tr -d '\r'`
 if [ "$ms" != "connected" ] ; then
 	time=0 ; while [ "$ms" != "connected" ] && [ $time -lt $TIMEOUT ]; do
-		[ "$ms" != "connected" ] && (sleep 1; echo $MEDIATOR_PASSWD; sleep 2; echo $MEDIATOR_PASSWD)| sshpass -p $PASSWD ssh -l admin cluster2 snapmirror mediator add -mediator-address $MEDIATOR_IP -peer-cluster cluster1 -username mediatoradmin -port-number $MEDIATOR_PORT
+		[ "$ms" != "connected" ] && (sleep 1; echo $MEDIATOR_PASSWD; sleep 2; echo $MEDIATOR_PASSWD)| sshpass -p $PASSWD ssh -tt -l admin cluster2 snapmirror mediator add -mediator-address $MEDIATOR_IP -peer-cluster cluster1 -username mediatoradmin -port-number $MEDIATOR_PORT
 		sleep 1; time=$(($time + 1))
 		ms=`sshpass -p $PASSWD ssh -l admin cluster2 snapmirror mediator show -mediator-address $MEDIATOR_IP -peer-cluster cluster1 |grep $MEDIATOR_IP |awk '{print $3}' | tr -d '\r'`
 		echo "Mediator status [$ms] [$time]"
